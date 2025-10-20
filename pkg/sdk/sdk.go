@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/altgen.ai/sandboxed/pkg/k8sclient"
-	"github.com/altgen.ai/sandboxed/pkg/k8sclient/templates"
+	"github.com/altgen-ai/sandboxed/pkg/k8sclient"
+	"github.com/altgen-ai/sandboxed/pkg/k8sclient/templates"
 )
 
 type SandboxOption struct {
@@ -32,6 +32,7 @@ func NewSandboxForDocker() Sandboxed {
 
 type sandboxedImpl struct{
 	driver string
+	id string
 	lc *LanguageContainer
 }
 
@@ -109,6 +110,30 @@ func CreateSandbox(name, lang string, opts ...SandboxOption) (Sandboxed, error) 
 		return nil, err
 	}
 
+	s.id  = podName
+
+	return s, nil
+}
+
+
+func NewInstance(id string, opts ...SandboxOption) (Sandboxed, error) {
+	
+	s := &sandboxedImpl{
+		driver: "kubernetes",
+	}
+
+
+	lcVal := &LanguageContainer{
+		// name:    id,
+		// language: lang,
+		// image:    image,
+		impl:    s,
+		opts:    opts,
+	}
+
+	s.lc = lcVal
+	s.id = id
+
 	return s, nil
 }
 
@@ -123,7 +148,7 @@ func (s *sandboxedImpl) Run( code string) (*Output, error) {
 	}
 
 	var namespace string
-	var podName = "sandboxed-" + s.lc.name
+	var podName = s.id
 
 	ns, ok := mapOptions["namespace"].(string)
 	if ok {

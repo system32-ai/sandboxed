@@ -35,16 +35,52 @@ go build -o sandboxed
 - **exec [command]**: Execute shell commands with optional directory and environment settings
 - **code [path]**: Open files or directories in a code editor (VS Code by default)
 - **help**: Show help for any command
+- **server**: Run as a REST server
+- **mcp**: Run as mcp server
 
 
-## Dependencies
+## Using the SDK
 
-- [Cobra](https://github.com/spf13/cobra) - A library for creating powerful modern CLI applications
-- [Kubernetes client-go](https://github.com/kubernetes/client-go) - Go client for Kubernetes API
+```
+package main
 
-## Prerequisites
+import (
+	"log"
 
-For Kubernetes functionality:
-- Access to a Kubernetes cluster
-- Valid kubeconfig file (usually at `~/.kube/config`)
-- Appropriate RBAC permissions for pod operations
+	"github.com/altgen-ai/sandboxed/pkg/sdk"
+)
+
+func main() {
+
+	sandbox, err := sdk.CreateSandbox("debug-generated-code", "python")
+	if err != nil {
+		log.Fatalf("failed to create sandbox: %v", err)
+	}
+
+	defer sandbox.Destroy()
+
+	code := `python -c 'print("Hello, World!")'`
+
+	output, err := sandbox.Run(code)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Output: %s", output.Result)
+
+	code = `python --version`
+	output, err = sandbox.Run(code)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Output: %s", output.Result)
+}
+
+```
+
+## Using the REST APIs
+
+
+## Using the MCP server
+

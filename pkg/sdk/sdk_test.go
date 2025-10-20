@@ -3,7 +3,7 @@ package sdk_test
 import (
 	"testing"
 
-	"github.com/altgen.ai/sandboxed/pkg/sdk"
+	"github.com/altgen-ai/sandboxed/pkg/sdk"
 )
 
 func TestSimpleCodeRun(t *testing.T) {
