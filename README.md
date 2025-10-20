@@ -1,9 +1,6 @@
 # Sandboxed
 
-Create sanboxed environment for running generated code
-
-<img src="./logo.png">
-
+Create sanboxed environment for running generated code.
 ## Getting Started
 
 ### Prerequisites
