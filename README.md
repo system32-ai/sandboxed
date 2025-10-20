@@ -2,10 +2,12 @@
 
 Create sanboxed environment for running generated code
 
+<img src="./logo.png">
+
 ## Getting Started
 
 ### Prerequisites
-- Go 1.19 or later
+- Go 1.23 or later
 
 ### Running the Application
 ```bash
@@ -20,8 +22,9 @@ go run main.go version
 
 # Execute shell commands
 go run main.go exec "ls -la"
-go run main.go exec "echo Hello" --dir /tmp
-go run main.go exec "echo $MY_VAR" --env MY_VAR=value
+go run main.go exec "echo Hello" 
+go run main.go exec "echo $MY_VAR"
+```
 
 ### Building the Application
 ```bash

@@ -14,8 +14,8 @@ type SandboxOption struct {
 }
 
 type Sandboxed interface {
-	CreateSandbox(name string, lang string, opts ...SandboxOption) (*LanguageContainer, error)
-	Run(name, image string, code []string, opts ...SandboxOption) (*Output, error)
+	Run(code string) (*Output, error)
+	Destroy() error
 }
 
 func NewSandboxed() Sandboxed {
@@ -32,32 +32,40 @@ func NewSandboxForDocker() Sandboxed {
 
 type sandboxedImpl struct{
 	driver string
+	lc *LanguageContainer
 }
 
-func (s *sandboxedImpl) CreateSandbox(name, lang string, opts ...SandboxOption) (*LanguageContainer, error) {
+func CreateSandbox(name, lang string, opts ...SandboxOption) (Sandboxed, error) {
+	
+	s := &sandboxedImpl{
+		driver: "kubernetes",
+	}
+
+	var client *k8sclient.Client
+	var err error
+
 	image, err := templates.LanguageLookup(lang)
 	if err != nil {
 		return nil, err
 	}
 
-	return &LanguageContainer{
+	lcVal := &LanguageContainer{
 		name:    name,
 		language: lang,
 		image:    image,
 		impl:    s,
 		opts:    opts,
-	}, nil
-}
+	}
 
-func (s *sandboxedImpl) Run(name, image string, code []string, opts ...SandboxOption) (*Output, error) {
+	s.lc = lcVal
 
 	var mapOptions = make(map[string]interface{})
-	for _, opt := range opts {
+	for _, opt := range s.lc.opts {
 		mapOptions[opt.Name] = opt.Value
 	}
 
 	var namespace string
-	var podName = "sandboxed-" + name
+	var podName = "sandboxed-" + s.lc.name
 
 	ns, ok := mapOptions["namespace"].(string)
 	if ok {
@@ -65,9 +73,6 @@ func (s *sandboxedImpl) Run(name, image string, code []string, opts ...SandboxOp
 	} else {
 		namespace = "default"
 	}
-
-	var client *k8sclient.Client
-	var err error
 
 	if s.driver == "kubernetes" {
 		client, err = k8sclient.NewClient(namespace)
@@ -90,7 +95,7 @@ func (s *sandboxedImpl) Run(name, image string, code []string, opts ...SandboxOp
 		pod.Labels["created-by"] = "sandboxed-sdk"
 	}
 
-	pod.Image = image
+	pod.Image = s.lc.image
 	pod.Name = podName
 	pod.Namespace = namespace
 	pod.Command = []string{"sh", "-c", "tail -f /dev/null"}
@@ -104,18 +109,42 @@ func (s *sandboxedImpl) Run(name, image string, code []string, opts ...SandboxOp
 		return nil, err
 	}
 
-	var cmds []string
-	
-	for _, line := range code {
-		cmds = append(cmds, "sh -c '"+line+"'")
+	return s, nil
+}
+
+func (s *sandboxedImpl) Run( code string) (*Output, error) {
+
+	var client *k8sclient.Client
+	var err error
+
+	var mapOptions = make(map[string]interface{})
+	for _, opt := range s.lc.opts {
+		mapOptions[opt.Name] = opt.Value
 	}
 
-	o, err := client.ExecCommand(podName, pod.Namespace, cmds)
+	var namespace string
+	var podName = "sandboxed-" + s.lc.name
+
+	ns, ok := mapOptions["namespace"].(string)
+	if ok {
+		namespace = ns
+	} else {
+		namespace = "default"
+	}
+
+	if s.driver == "kubernetes" {
+		client, err = k8sclient.NewClient(namespace)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil	, errors.New("unsupported driver: " + s.driver)
+	}
+
+	o, err := client.ExecCommand(podName, namespace, []string{"sh", "-c", code})
 	if err != nil {
 		return nil, err
 	}
-
-	defer client.DeletePod(podName, pod.Namespace)
 
 	return &Output{
 		Result: o,
@@ -124,3 +153,36 @@ func (s *sandboxedImpl) Run(name, image string, code []string, opts ...SandboxOp
 	}, nil
 }
 
+
+func (s *sandboxedImpl) Destroy() error {
+	
+	var mapOptions = make(map[string]interface{})	
+	for _, opt := range s.lc.opts {
+		mapOptions[opt.Name] = opt.Value
+	}
+
+	var namespace string
+
+	ns, ok := mapOptions["namespace"].(string)
+	if ok {
+		namespace = ns
+	} else {
+		namespace = "default"
+	}
+
+	var client *k8sclient.Client
+	var err error
+
+	if s.driver == "kubernetes" {
+		client, err = k8sclient.NewClient(namespace)
+		if err != nil {
+			return err
+		}
+	} else {
+		return errors.New("unsupported driver: " + s.driver)
+	}
+
+	podName := "sandboxed-" + s.lc.name
+
+	return client.ForceDeletePod(podName, namespace)
+}

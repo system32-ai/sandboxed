@@ -128,14 +128,36 @@ func (c *Client) CreatePod(spec PodSpec) (*corev1.Pod, error) {
 
 // DeletePod deletes a pod from the cluster
 func (c *Client) DeletePod(name, namespace string) error {
+	return c.DeletePodWithOptions(name, namespace, false)
+}
+
+// ForceDeletePod forcefully deletes a pod from the cluster
+func (c *Client) ForceDeletePod(name, namespace string) error {
+	return c.DeletePodWithOptions(name, namespace, true)
+}
+
+// DeletePodWithOptions deletes a pod with specific options
+func (c *Client) DeletePodWithOptions(name, namespace string, force bool) error {
 	if namespace == "" {
 		namespace = c.namespace
+	}
+
+	deleteOptions := metav1.DeleteOptions{}
+	
+	if force {
+		// Set grace period to 0 for immediate deletion
+		gracePeriodSeconds := int64(0)
+		deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
+		
+		// Set propagation policy to foreground for immediate deletion
+		foregroundDeletion := metav1.DeletePropagationForeground
+		deleteOptions.PropagationPolicy = &foregroundDeletion
 	}
 
 	err := c.clientset.CoreV1().Pods(namespace).Delete(
 		context.TODO(),
 		name,
-		metav1.DeleteOptions{},
+		deleteOptions,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to delete pod %s in namespace %s: %v", name, namespace, err)
@@ -316,7 +338,7 @@ func (c *Client) ExecCommand(podName, namespace string, command []string) (strin
 		Command: command,
 		Stdout:  &stdout,
 		Stderr:  &stderr,
-		TTY:     false,
+		TTY:     true,
 	})
 	if err != nil {
 		return "", fmt.Errorf("exec failed: %v, stderr: %s", err, stderr.String())
