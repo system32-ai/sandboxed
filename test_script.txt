@@ -1,0 +1,8 @@
+# This is a sample script file for testing exec -f
+# Lines starting with # are ignored
+
+echo "Starting script execution..."
+pwd
+ls -la
+echo "Current date: $(date)"
+echo "Script execution complete!"
