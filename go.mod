@@ -1,4 +1,4 @@
-module github.com/altgen.ai/sandboxed
+module github.com/altgen-ai/sandboxed
 
 go 1.24.2
 
