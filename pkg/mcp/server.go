@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 
 	"github.com/altgen-ai/sandboxed/pkg/sdk"
@@ -77,10 +78,10 @@ func NewServer() *mcp.Server {
 func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 	// Register create_sandbox tool
 	type CreateSandboxArgs struct {
-		Name      string            `json:"name" jsonschema:"required,description=Unique name for the sandbox"`
-		Language  string            `json:"language" jsonschema:"required,description=Programming language for the sandbox (e.g. python, javascript, go)"`
-		Namespace string            `json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace (optional, defaults to 'default')"`
-		Labels    map[string]string `json:"labels,omitempty" jsonschema:"description=Additional labels for the sandbox pod (optional)"`
+		Name      string            `json:"name"`
+		Language  string            `json:"language"`
+		Namespace string            `json:"namespace,omitempty"`
+		Labels    map[string]string `json:"labels,omitempty"`
 	}
 
 	type CreateSandboxResult struct {
@@ -110,8 +111,17 @@ func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 			opts = append(opts, sdk.SandboxOption{Name: "labels", Value: args.Labels})
 		}
 
+		lang, err := sdk.ToLanguage(args.Language)
+		if err != nil {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Invalid language: %v", err)},
+				},
+			}, CreateSandboxResult{Success: false, Message: err.Error()}, nil
+		}
+
 		// Create sandbox
-		sandbox, err := sdk.CreateSandbox(args.Name, args.Language, opts...)
+		sandbox, err := sdk.CreateSandbox(args.Name, lang, opts...)
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
@@ -132,8 +142,8 @@ func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 
 	// Register run_code tool
 	type RunCodeArgs struct {
-		SandboxName string `json:"sandbox_name" jsonschema:"required,description=Name of the sandbox to run code in"`
-		Code        string `json:"code" jsonschema:"required,description=Code to execute in the sandbox"`
+		SandboxName string `json:"sandbox_name"`
+		Code        string `json:"code"`
 	}
 
 	type RunCodeResult struct {
@@ -177,7 +187,7 @@ func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 
 	// Register destroy_sandbox tool
 	type DestroySandboxArgs struct {
-		SandboxName string `json:"sandbox_name" jsonschema:"required,description=Name of the sandbox to destroy"`
+		SandboxName string `json:"sandbox_name"`
 	}
 
 	type DestroySandboxResult struct {
@@ -257,4 +267,104 @@ func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 func RunServer(server *mcp.Server) error {
 	log.Println("Starting MCP server for sandboxed code execution...")
 	return server.Run(context.Background(), &mcp.StdioTransport{})
+}
+
+// RunServerSSE starts the MCP server with SSE (Server-Sent Events) support
+func RunServerSSE(server *mcp.Server, port int) error {
+	log.Printf("Starting MCP server with SSE support on port %d...", port)
+	
+	// Create SSE handler
+	mcpSSEHandler := mcp.NewSSEHandler(func(request *http.Request) *mcp.Server {
+		return server
+	}, &mcp.SSEOptions{})
+	
+	// Wrap the SSE handler to ensure proper headers
+	sseHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set SSE headers
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Cache-Control")
+		
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		// Delegate to the MCP SSE handler
+		mcpSSEHandler.ServeHTTP(w, r)
+	})
+	
+	// Set up HTTP routes
+	http.Handle("/sse", sseHandler)
+	
+	// Add health check endpoint
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "healthy", "service": "sandboxed-mcp"}`))
+	})
+	
+	// Add CORS support for web clients
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept")
+		
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		// Serve simple info page
+		if r.URL.Path == "/" {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sandboxed MCP Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .endpoint { background: #f5f5f5; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .method { font-weight: bold; color: #0066cc; }
+    </style>
+</head>
+<body>
+    <h1>Sandboxed MCP Server</h1>
+    <p>This is an MCP (Model Context Protocol) server providing sandbox management tools.</p>
+    <h2>Available Tools:</h2>
+    <ul>
+        <li><strong>create_sandbox</strong> - Create a new sandbox environment</li>
+        <li><strong>run_code</strong> - Execute code in an existing sandbox</li>
+        <li><strong>destroy_sandbox</strong> - Destroy a sandbox and clean up resources</li>
+        <li><strong>list_sandboxes</strong> - List all active sandboxes</li>
+    </ul>
+    <h2>Endpoints:</h2>
+    <div class="endpoint">
+        <span class="method">GET/POST</span> <code>/sse</code> - SSE endpoint for MCP communication
+    </div>
+    <div class="endpoint">
+        <span class="method">GET</span> <code>/health</code> - Health check endpoint
+    </div>
+    <h2>Usage:</h2>
+    <p>Connect using an MCP client with SSE transport to: <code>http://localhost:` + fmt.Sprintf("%d", port) + `/sse</code></p>
+    <p>Example using curl to test the health endpoint:</p>
+    <pre>curl http://localhost:` + fmt.Sprintf("%d", port) + `/health</pre>
+</body>
+</html>
+			`))
+			return
+		}
+		
+		http.NotFound(w, r)
+	})
+	
+	addr := fmt.Sprintf(":%d", port)
+	log.Printf("MCP SSE server listening on %s", addr)
+	return http.ListenAndServe(addr, nil)
 }

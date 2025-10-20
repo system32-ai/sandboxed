@@ -19,4 +19,4 @@ func LanguageLookup(lang string) (string, error) {
 	}
 	return "", errors.New("unsupported language: " + lang)
 }
-		
+	

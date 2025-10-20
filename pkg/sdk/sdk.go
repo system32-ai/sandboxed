@@ -8,6 +8,35 @@ import (
 	"github.com/altgen-ai/sandboxed/pkg/k8sclient/templates"
 )
 
+	
+type Language string
+
+const (
+	Python Language = "python"
+	Go     Language = "go"
+	Node   Language = "node"
+	Java   Language = "java"
+	Ruby   Language = "ruby"
+	PHP    Language = "php"
+	Rust   Language = "rust"
+)
+
+func (l Language) DockerImage() (string, error) {
+	return templates.LanguageLookup(string(l))
+}
+
+func (l Language) IsValid() bool {
+	_, err := templates.LanguageLookup(string(l))
+	return err == nil
+}
+
+func ToLanguage(lang string) (Language, error) {
+	if _, err := templates.LanguageLookup(lang); err != nil {
+		return "", err
+	}
+	return Language(lang), nil
+}
+
 type SandboxOption struct {
 	Name string
 	Value interface{}
@@ -36,7 +65,7 @@ type sandboxedImpl struct{
 	lc *LanguageContainer
 }
 
-func CreateSandbox(name, lang string, opts ...SandboxOption) (Sandboxed, error) {
+func CreateSandbox(name string, lang Language, opts ...SandboxOption) (Sandboxed, error) {
 	
 	s := &sandboxedImpl{
 		driver: "kubernetes",
@@ -45,14 +74,14 @@ func CreateSandbox(name, lang string, opts ...SandboxOption) (Sandboxed, error) 
 	var client *k8sclient.Client
 	var err error
 
-	image, err := templates.LanguageLookup(lang)
+	image, err := templates.LanguageLookup(string(lang))
 	if err != nil {
 		return nil, err
 	}
 
 	lcVal := &LanguageContainer{
 		name:    name,
-		language: lang,
+		language: string(lang),
 		image:    image,
 		impl:    s,
 		opts:    opts,

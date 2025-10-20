@@ -8,7 +8,7 @@ import (
 
 func TestSimpleCodeRun(t *testing.T) {
 
-	sandbox, err := sdk.CreateSandbox("test", "python")
+	sandbox, err := sdk.CreateSandbox("test", sdk.Python)
 	if err != nil {	
 		t.Fatalf("failed to create sandbox: %v", err)
 	}

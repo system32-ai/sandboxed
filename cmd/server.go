@@ -224,7 +224,18 @@ func createSandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 	opt.Name = "namespace"
 	opt.Value = req.Namespace
 
-	_, err := sdk.CreateSandbox(id, "python", opt)
+
+	lang, err := sdk.ToLanguage(req.Language)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, SandboxResponse{
+			Success:   false,
+			Error:     fmt.Sprintf("Invalid language: %v", err),
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	_, err = sdk.CreateSandbox(id, lang, opt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, SandboxResponse{
 			Success:   false,

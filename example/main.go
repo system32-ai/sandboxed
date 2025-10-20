@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	sandbox, err := sdk.CreateSandbox("debug-generated-code", "python")
+	sandbox, err := sdk.CreateSandbox("debug-generated-code", sdk.Python)
 	if err != nil {
 		log.Fatalf("failed to create sandbox: %v", err)
 	}
@@ -31,5 +31,4 @@ func main() {
 	}
 
 	log.Printf("Output: %s", output.Result)
-
 }
