@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.1] - 2025-10-22
+
+### Changes
+
+- Initial release
+
+
 ## [v0.0.2] - 2025-10-22
 
 ### Changes
