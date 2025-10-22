@@ -21,6 +21,27 @@ const (
 	Rust   Language = "rust"
 )
 
+func (l Language) GetExecScript() string {
+	switch l {
+	case Python:
+		return "python3 /tmp/exec_script.sh"
+	case Go:
+		return "go run /tmp/exec_script.go"
+	case Node:
+		return "node /tmp/exec_script.js"
+	case Java:
+		return "javac /tmp/ExecScript.java && java -cp /tmp ExecScript"
+	case Ruby:
+		return "ruby /tmp/exec_script.rb"
+	case PHP:
+		return "php /tmp/exec_script.php"
+	case Rust:
+		return "rustc /tmp/exec_script.rs -o /tmp/exec_script && /tmp/exec_script"
+	default:
+		return ""
+	}
+}
+
 func (l Language) DockerImage() (string, error) {
 	return templates.LanguageLookup(string(l))
 }
@@ -44,6 +65,7 @@ type SandboxOption struct {
 
 type Sandboxed interface {
 	Run(code string) (*Output, error)
+	Exec(commands string) (*Output, error)
 	Destroy() error
 }
 
@@ -207,6 +229,69 @@ func (s *sandboxedImpl) Run( code string) (*Output, error) {
 	}, nil
 }
 
+
+func (s *sandboxedImpl) Exec( commands string) (*Output, error) {
+	
+	var client *k8sclient.Client
+	var err error
+
+	var mapOptions = make(map[string]interface{})
+	for _, opt := range s.lc.opts {
+		mapOptions[opt.Name] = opt.Value
+	}
+	
+	var namespace string
+	var podName = s.id
+	ns, ok := mapOptions["namespace"].(string)
+	if ok {
+		namespace = ns
+	} else {
+		namespace = "default"
+	}
+	
+	if s.driver == "kubernetes" {
+		client, err = k8sclient.NewClient(namespace)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil	, errors.New("unsupported driver: " + s.driver)
+	}
+	
+	// Write commands to a temporary file and execute it
+	filename := "/tmp/exec_script.sh"
+	writeCmd := []string{"sh", "-c", "cat > " + filename + " << 'EOF'\n" + commands + "\nEOF"}
+	
+	// First, write the commands to a file
+	_, err = client.ExecCommand(podName, namespace, writeCmd)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Make the file executable
+	chmodCmd := []string{"sh", "-c", "chmod +x " + filename}
+	_, err = client.ExecCommand(podName, namespace, chmodCmd)
+	if err != nil {
+		return nil, err
+	}
+
+	lt, err := ToLanguage(s.lc.language)
+	if err != nil {
+		return nil, err
+	}
+
+	// Execute the file
+	o, err := client.ExecCommand(podName, namespace, []string{"sh", "-c", lt.GetExecScript()})
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Output{
+		Result: o,
+		Error:    "",
+		ExitCode: 0,
+	}, nil
+}
 
 func (s *sandboxedImpl) Destroy() error {
 	

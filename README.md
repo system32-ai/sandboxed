@@ -1,36 +1,25 @@
 # Sandboxed
 
-A comprehensive sandbox platform for secure code execution in Kubernetes environments. Provides REST API, MCP (Model Context Protocol) server, and Go SDK for running code in isolated containers.
+A comprehensive sandbox platform for secure code execution in Kubernetes environments. Provides REST API, MCP (Model Context Protocol) server with SSE support, and Go SDK for running code in isolated containers.
 
 ## Features
 
-- 🔒 **Secure Execution**: Code runs in isolated Kubernetes pods
-- 🌐 **Multiple Interfaces**: REST API, MCP server, and Go SDK
-- 🐍 **Multi-Language Support**: Python, JavaScript, Go, Java, and more
-- 🤖 **AI Integration**: Built-in MCP server for AI assistants
-- 📡 **Production Ready**: RBAC, monitoring, and deployment configurations
+- 🔒 **Secure Execution**: Code runs in isolated Kubernetes pods with RBAC controls
+- 🌐 **Multiple Interfaces**: REST API, MCP server (stdio + SSE), and Go SDK
+- 🐍 **Multi-Language Support**: Python, Go, Node.js, Java, Ruby, PHP, Rust
+- 🤖 **AI Integration**: Built-in MCP server for AI assistants and coding agents
+- 📡 **Production Ready**: Cross-platform builds, Docker images, and CI/CD automation
 - 🛠️ **Flexible Configuration**: Customizable namespaces, labels, and resource limits
+- ⚡ **SSE Support**: Server-Sent Events transport for web-based MCP clients
+- 📦 **Enhanced Code Execution**: File-based script execution with language-specific interpreters
 ## Getting Started
 
 ### Prerequisites
-- Go 1.23 or later
+- Go 1.24 or later
+- Kubernetes cluster access (for sandbox execution)
+- Docker (optional, for containerized deployment)
 
-### Running the Application
-```bash
-# Run the main command
-go run main.go
 
-# Show help
-go run main.go --help
-
-# Show version
-go run main.go version
-
-# Execute shell commands
-go run main.go exec "ls -la"
-go run main.go exec "echo Hello" 
-go run main.go exec "echo $MY_VAR"
-```
 
 ### Building the Application
 ```bash
@@ -56,18 +45,6 @@ The `sandboxed` CLI provides several commands for different use cases:
 ```bash
 # Show version information
 ./sandboxed version
-
-# Execute a simple shell command
-./sandboxed exec "echo 'Hello World'"
-
-# Execute with environment variables
-./sandboxed exec "echo \$MY_VAR" --env MY_VAR=test
-
-# Open current directory in VS Code
-./sandboxed code .
-
-# Open specific file in editor
-./sandboxed code /path/to/file.py
 
 # Start REST API server on custom port
 ./sandboxed server --port 9000
@@ -115,7 +92,7 @@ data = {"message": "Hello, World!", "python_version": sys.version}
 print(json.dumps(data, indent=2))
 `
 
-	output, err := sandbox.Run(code)
+	output, err := sandbox.Exec(code)
 	if err != nil {
 		log.Fatalf("failed to run code: %v", err)
 	}
@@ -212,7 +189,7 @@ func runLanguageExample(name, language, code string) {
 	}
 	defer sandbox.Destroy()
 
-	output, err := sandbox.Run(code)
+	output, err := sandbox.Exec(code)
 	if err != nil {
 		log.Printf("Failed to run %s code: %v", name, err)
 		return
@@ -301,58 +278,21 @@ print("This won't be reached")
 
 ### SDK API Reference
 
-#### Types
-
-```go
-// Sandboxed interface for sandbox operations
-type Sandboxed interface {
-    Run(code string) (*Output, error)
-    Destroy() error
-}
-
-// SandboxOption for configuring sandbox creation
-type SandboxOption struct {
-    Name  string
-    Value interface{}
-}
-
-// Output represents execution results
-type Output struct {
-    Result   string  // stdout/stderr output
-    Error    string  // error message if any
-    ExitCode int     // process exit code
-}
-```
-
-#### Functions
-
-```go
-// CreateSandbox creates a new sandbox with the specified language and options
-func CreateSandbox(name, lang string, opts ...SandboxOption) (Sandboxed, error)
-
-// NewSandboxed creates a sandbox using Kubernetes driver
-func NewSandboxed() Sandboxed
-
-// NewSandboxForDocker creates a sandbox using Docker driver (if available)
-func NewSandboxForDocker() Sandboxed
-```
-
-#### Available Options
-
-- `namespace`: Kubernetes namespace (string)
-- `labels`: Pod labels (map[string]string)
-
 #### Supported Languages
 
-The SDK automatically detects the appropriate container image for each language:
+The SDK automatically detects the appropriate container image and execution method for each language:
 
-- `python`: Python 3.x with pip
-- `javascript` / `node`: Node.js with npm
-- `go`: Go compiler and tools
-- `java`: OpenJDK with Maven
-- `rust`: Rust compiler and Cargo
-- `ruby`: Ruby interpreter with gems
-- `php`: PHP interpreter with Composer
+- `python`: Python 3.9 with pip (`python3 script.py`)
+- `go`: Go 1.24 compiler and tools (`go run script.go`)
+- `node`: Node.js 14 with npm (`node script.js`)
+- `java`: OpenJDK 11 with compilation (`javac + java`)
+- `rust`: Rust 1.56 compiler (`rustc + executable`)
+- `ruby`: Ruby 2.7 interpreter (`ruby script.rb`)
+- `php`: PHP 8.0 interpreter (`php script.php`)
+
+#### Enhanced Execution
+
+The `Exec()` method now writes code to temporary files with proper language extensions and executes them using language-specific interpreters for better error handling and multi-line code support.
 
 ## REST API Server
 
@@ -478,6 +418,35 @@ func main() {
     fmt.Printf("Output: %s\n", result.Result)
     fmt.Printf("Exit Code: %d\n", result.ExitCode)
 }
+```
+
+### SSE (Server-Sent Events) Support
+
+For web-based applications, you can connect to the MCP server using SSE transport:
+
+```javascript
+// Connect to MCP server via SSE
+const sseUrl = 'http://localhost:8080/sse';
+
+// Example using a hypothetical MCP JavaScript client
+const mcpClient = new MCPClient({
+  transport: 'sse',
+  url: sseUrl
+});
+
+// Create sandbox and run code
+await mcpClient.callTool('create_sandbox', {
+  name: 'web-sandbox',
+  language: 'python'
+});
+
+const result = await mcpClient.callTool('run_code', {
+  sandbox_name: 'web-sandbox',
+  code: 'print("Hello from web client!")'
+});
+
+console.log(result.output);
+```
 
 
 ## MCP (Model Context Protocol) Server
@@ -486,13 +455,32 @@ The MCP server provides sandbox management tools for AI assistants and other cli
 
 ### Starting the MCP Server
 
+The MCP server supports two transport modes:
+
+#### 1. Stdio Mode (Default)
+For AI assistants and command-line MCP clients:
 ```bash
-# Start the MCP server
+# Start the MCP server (stdio mode)
 ./sandboxed mcp
 
 # Or using go run
 go run main.go mcp
 ```
+
+#### 2. SSE (Server-Sent Events) Mode
+For web-based clients and HTTP transport:
+```bash
+# Start in SSE mode on default port 8080
+./sandboxed mcp --sse
+
+# Start in SSE mode on custom port
+./sandboxed mcp --sse --port 9000
+
+# Or using go run
+go run main.go mcp --sse --port 8080
+```
+
+The SSE mode provides a web interface at `http://localhost:8080` with API documentation and connection details.
 
 ### Available MCP Tools
 
@@ -666,13 +654,17 @@ func main() {
 
 ### Supported Languages
 
-The sandbox supports the following programming languages:
+The sandbox supports the following programming languages with enhanced execution:
 
-- **Python**: Full Python environment with common packages
-- **JavaScript/Node.js**: Node.js runtime with npm packages
-- **Go**: Go compiler and standard library
-- **Java**: OpenJDK with build tools
-- **And more**: Check the language templates in `pkg/k8sclient/templates/`
+- **Python 3.9**: Full environment with pip package management
+- **Go 1.24**: Complete Go development environment with compiler
+- **Node.js 14**: JavaScript runtime with npm package management
+- **Java 11**: OpenJDK with compilation and execution support
+- **Rust 1.56**: Rust compiler with cargo build tools
+- **Ruby 2.7**: Ruby interpreter with gem support
+- **PHP 8.0**: PHP interpreter with composer support
+
+Each language uses optimized container images and language-specific execution methods for better performance and error handling.
 
 ### Error Handling
 
@@ -818,15 +810,17 @@ spec:
 
 ### Language Container Images
 
-The system uses predefined container images for different languages. You can customize these in `pkg/k8sclient/templates/lang.go`:
+The system uses predefined container images for different languages in `pkg/k8sclient/templates/lang.go`:
 
 ```go
 var languageImages = map[string]string{
-    "python":     "python:3.11-slim",
-    "javascript": "node:18-alpine", 
-    "go":         "golang:1.21-alpine",
-    "java":       "openjdk:11-jre-slim",
-    // Add custom images here
+    "go":     "golang:1.24",
+    "python": "python:3.9",
+    "node":   "node:14",
+    "java":   "openjdk:11",
+    "ruby":   "ruby:2.7",
+    "php":    "php:8.0",
+    "rust":   "rust:1.56",
 }
 ```
 
@@ -867,6 +861,16 @@ var languageImages = map[string]string{
 - Configure NetworkPolicies if external access is needed
 - Use appropriate cluster configuration for your networking requirements
 
+#### 5. SSE Connection Issues
+
+**Error**: `SSE connection fails or times out`
+
+**Solution**:
+- Ensure MCP server is running in SSE mode (`--sse` flag)
+- Check firewall settings and port accessibility
+- Verify CORS headers if connecting from a web browser
+- Use the web interface at `http://localhost:8080` to test connectivity
+
 ### Debug Mode
 
 Enable debug logging to troubleshoot issues:
@@ -889,6 +893,53 @@ kubectl get pods -l created-by=sandboxed-sdk
 kubectl logs -l app=sandboxed -f
 ```
 
+## Release and Distribution
+
+The project includes automated release pipelines for cross-platform distribution:
+
+### Automated Releases
+
+Create releases automatically by pushing tags:
+
+```bash
+# Create and push a release tag
+git tag v1.0.0
+git push origin v1.0.0
+
+# Or use the release script
+./scripts/release.sh v1.0.0
+```
+
+### Available Distributions
+
+Each release provides:
+- **Cross-platform binaries**: Linux, macOS, Windows (AMD64, ARM64)
+- **Docker images**: Multi-arch containers via GitHub Container Registry
+- **Automated changelog**: Generated from commit history
+- **GitHub Actions**: Complete CI/CD pipeline
+
+### Docker Images
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/altgen-ai/sandboxed:latest
+
+# Run the container
+docker run -p 8080:8080 ghcr.io/altgen-ai/sandboxed:latest
+```
+
+### Manual Building
+
+```bash
+# Build for current platform
+go build -o sandboxed .
+
+# Cross-compile for different platforms
+GOOS=linux GOARCH=amd64 go build -o sandboxed-linux-amd64 .
+GOOS=darwin GOARCH=arm64 go build -o sandboxed-darwin-arm64 .
+GOOS=windows GOARCH=amd64 go build -o sandboxed-windows-amd64.exe .
+```
+
 ## Contributing
 
 1. Fork the repository
@@ -896,6 +947,26 @@ kubectl logs -l app=sandboxed -f
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/altgen-ai/sandboxed.git
+cd sandboxed
+
+# Install dependencies
+go mod download
+
+# Run tests
+go test ./...
+
+# Build locally
+go build -o sandboxed .
+
+# Run with development flags
+./sandboxed mcp --sse --port 8080
+```
 
 ## License
 

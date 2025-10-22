@@ -89,7 +89,7 @@ get_next_version() {
     local version_type="$1"
     
     # Get the latest tag
-    current_version=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+    current_version=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
     
     # Remove 'v' prefix if present
     current_version=${current_version#v}
