@@ -5,19 +5,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/altgen-ai/sandboxed/pkg/k8sclient"
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
+	"github.com/system32-ai/sandboxed/pkg/k8sclient"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 // ExecuteRequest represents a code execution request
 type ExecuteRequest struct {
-	Language  string            `json:"language" binding:"required"`
-	Code      string            `json:"code" binding:"required"`
-	Namespace string            `json:"namespace,omitempty"`
+	Language  string `json:"language" binding:"required"`
+	Code      string `json:"code" binding:"required"`
+	Namespace string `json:"namespace,omitempty"`
 	// Labels    map[string]string `json:"labels,omitempty"`
-	SandboxID string            `json:"sandbox_id,omitempty"`
+	SandboxID string `json:"sandbox_id,omitempty"`
 }
 
 // ExecuteResponse represents a code execution response
@@ -34,15 +34,15 @@ type SandboxRequest struct {
 	Language  string            `json:"language" binding:"required"`
 	Namespace string            `json:"namespace,omitempty"`
 	Labels    map[string]string `json:"labels,omitempty"`
-	Name string 		  `json:"name,omitempty"`
+	Name      string            `json:"name,omitempty"`
 }
 
 // SandboxResponse represents a sandbox creation response
 type SandboxResponse struct {
-	Success     bool   `json:"success"`
-	SandboxID   string `json:"sandbox_id,omitempty"`
-	Error       string `json:"error,omitempty"`
-	Timestamp   string `json:"timestamp"`
+	Success   bool   `json:"success"`
+	SandboxID string `json:"sandbox_id,omitempty"`
+	Error     string `json:"error,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 // PodListResponse represents a pod list response
@@ -79,20 +79,20 @@ Examples:
 		port, _ := cmd.Flags().GetInt("port")
 		debug, _ := cmd.Flags().GetBool("debug")
 		namespace, _ := cmd.Flags().GetString("namespace")
-		
+
 		// Set gin mode
 		if !debug {
 			gin.SetMode(gin.ReleaseMode)
 		}
-		
+
 		// Create gin router
 		r := gin.Default()
-		
+
 		// Add middleware
 		r.Use(gin.Logger())
 		r.Use(gin.Recovery())
 		r.Use(corsMiddleware())
-		
+
 		// Initialize Kubernetes client
 		k8sClient, err := k8sclient.NewClient(namespace)
 		if err != nil {
@@ -100,10 +100,10 @@ Examples:
 			fmt.Println("Kubernetes endpoints will not be available")
 			k8sClient = nil
 		}
-		
+
 		// Setup routes
 		setupRoutes(r, k8sClient)
-		
+
 		// Start server
 		addr := fmt.Sprintf(":%d", port)
 		fmt.Printf("Starting sandboxed server on %s\n", addr)
@@ -113,7 +113,7 @@ Examples:
 		if k8sClient != nil {
 			fmt.Printf("Kubernetes integration enabled (namespace: %s)\n", namespace)
 		}
-		
+
 		if err := r.Run(addr); err != nil {
 			fmt.Printf("Failed to start server: %v\n", err)
 		}
@@ -124,13 +124,13 @@ func setupRoutes(r *gin.Engine, k8sClient *k8sclient.Client) {
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"timestamp": time.Now().Format(time.RFC3339),
-			"version":   "1.0.0",
+			"status":        "healthy",
+			"timestamp":     time.Now().Format(time.RFC3339),
+			"version":       "1.0.0",
 			"k8s_available": k8sClient != nil,
 		})
 	})
-	
+
 	// API documentation endpoint
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -138,14 +138,14 @@ func setupRoutes(r *gin.Engine, k8sClient *k8sclient.Client) {
 			"version":     "1.0.0",
 			"description": "Code execution and Kubernetes management API",
 			"endpoints": gin.H{
-				"health":           "GET /health - Health check",
-				"sandbox_create":   "POST /api/v1/sandbox/create - Create sandbox",
-				"sandbox_execute":  "POST /api/v1/execute - Execute in sandbox",
-				"sandbox_destroy":  "POST /api/v1/sandbox/destroy - Destroy sandbox",
+				"health":          "GET /health - Health check",
+				"sandbox_create":  "POST /api/v1/sandbox/create - Create sandbox",
+				"sandbox_execute": "POST /api/v1/execute - Execute in sandbox",
+				"sandbox_destroy": "POST /api/v1/sandbox/destroy - Destroy sandbox",
 			},
 		})
 	})
-	
+
 	// API v1 group
 	if k8sClient != nil {
 		v1 := r.Group("/api/v1")
@@ -160,7 +160,7 @@ func setupRoutes(r *gin.Engine, k8sClient *k8sclient.Client) {
 			v1.POST("/sandbox/destroy", func(c *gin.Context) {
 				destroySandboxHandler(c, k8sClient)
 			})
-		
+
 		}
 	}
 }
@@ -170,12 +170,12 @@ func corsMiddleware() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -189,7 +189,7 @@ func executeCodeHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		})
 		return
 	}
-	
+
 	var req ExecuteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ExecuteResponse{
@@ -199,7 +199,7 @@ func executeCodeHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		})
 		return
 	}
-	
+
 	// Execute code and return result
 	result := executeCode(k8sClient, req)
 	c.JSON(getStatusCode(result.Success), result)
@@ -224,7 +224,6 @@ func createSandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 	opt.Name = "namespace"
 	opt.Value = req.Namespace
 
-
 	lang, err := sdk.ToLanguage(req.Language)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, SandboxResponse{
@@ -244,16 +243,16 @@ func createSandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, SandboxResponse{
 		Success:   true,
 		SandboxID: id,
-		Timestamp: time.Now().Format(time.RFC3339),		
+		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
 
 func executeInSandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	
+
 	var req ExecuteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ExecuteResponse{
@@ -291,7 +290,7 @@ func executeInSandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		Success:   true,
 		Output:    []string{output.Result},
 		Timestamp: time.Now().Format(time.RFC3339),
-	})	
+	})
 }
 
 func destroySandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
@@ -300,7 +299,7 @@ func destroySandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		Namespace string `json:"namespace,omitempty"`
 		Force     bool   `json:"force,omitempty"`
 	}
-	
+
 	var req DestroyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -309,14 +308,14 @@ func destroySandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		})
 		return
 	}
-	
+
 	var err error
 	if req.Force {
 		err = k8sClient.ForceDeletePod(req.SandboxID, req.Namespace)
 	} else {
 		err = k8sClient.DeletePod(req.SandboxID, req.Namespace)
 	}
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -324,7 +323,7 @@ func destroySandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("Sandbox %s destroyed successfully", req.SandboxID),
@@ -335,7 +334,7 @@ func executeCode(k8sClient *k8sclient.Client, req ExecuteRequest) ExecuteRespons
 	// Determine image and command based on language
 	image := getImageForLanguage(req.Language)
 	commands := getCommandsForLanguage(req.Language, req.Code)
-	
+
 	if image == "" || len(commands) == 0 {
 		return ExecuteResponse{
 			Success:   false,
@@ -343,7 +342,7 @@ func executeCode(k8sClient *k8sclient.Client, req ExecuteRequest) ExecuteRespons
 			Timestamp: time.Now().Format(time.RFC3339),
 		}
 	}
-	
+
 	// Create pod spec
 	podName := fmt.Sprintf("api-exec-%d", time.Now().Unix())
 	labels := map[string]string{
@@ -351,19 +350,19 @@ func executeCode(k8sClient *k8sclient.Client, req ExecuteRequest) ExecuteRespons
 		"language":   req.Language,
 		"created-by": "sandboxed-api",
 	}
-	
+
 	// Add custom labels
 	// for k, v := range req.Labels {
 	// 	labels[k] = v
 	// }
-	
+
 	spec := k8sclient.PodSpec{
 		Name:      podName,
 		Namespace: req.Namespace,
 		Image:     image,
 		Labels:    labels,
 	}
-	
+
 	// Execute code in pod
 	results, err := k8sClient.CreateAndRunPod(spec, commands, true) // cleanup = true
 	if err != nil {
@@ -374,7 +373,7 @@ func executeCode(k8sClient *k8sclient.Client, req ExecuteRequest) ExecuteRespons
 			Timestamp: time.Now().Format(time.RFC3339),
 		}
 	}
-	
+
 	return ExecuteResponse{
 		Success:   true,
 		Output:    results,
@@ -441,10 +440,9 @@ func getStatusCode(success bool) int {
 	return http.StatusInternalServerError
 }
 
-
 func init() {
 	rootCmd.AddCommand(serverCmd)
-	
+
 	// Add flags
 	serverCmd.Flags().IntP("port", "p", 8080, "Port to run the server on")
 	serverCmd.Flags().BoolP("debug", "d", false, "Enable debug mode")

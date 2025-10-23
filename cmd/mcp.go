@@ -3,8 +3,8 @@ package cmd
 import (
 	"log"
 
-	"github.com/altgen-ai/sandboxed/pkg/mcp"
 	"github.com/spf13/cobra"
+	"github.com/system32-ai/sandboxed/pkg/mcp"
 )
 
 var (
@@ -38,7 +38,7 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create MCP server
 		server := mcp.NewServer()
-		
+
 		if sseMode {
 			// Start SSE server
 			log.Printf("Starting MCP server in SSE mode on port %d", ssePort)

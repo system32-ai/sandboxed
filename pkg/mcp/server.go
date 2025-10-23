@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 // SandboxManager manages the state of all active sandboxes
@@ -179,7 +179,7 @@ func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Code executed successfully in sandbox '%s':\n\nOutput:\n%s\n\nExit Code: %d", 
+				&mcp.TextContent{Text: fmt.Sprintf("Code executed successfully in sandbox '%s':\n\nOutput:\n%s\n\nExit Code: %d",
 					args.SandboxName, output.Result, output.ExitCode)},
 			},
 		}, RunCodeResult{Success: true, Output: output.Result, ExitCode: output.ExitCode}, nil
@@ -241,7 +241,7 @@ func registerSandboxTools(server *mcp.Server, sandboxManager *SandboxManager) {
 		Description: "Lists all active sandbox environments",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, args ListSandboxesArgs) (*mcp.CallToolResult, ListSandboxesResult, error) {
 		sandboxes := sandboxManager.ListSandboxes()
-		
+
 		if len(sandboxes) == 0 {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
@@ -272,12 +272,12 @@ func RunServer(server *mcp.Server) error {
 // RunServerSSE starts the MCP server with SSE (Server-Sent Events) support
 func RunServerSSE(server *mcp.Server, port int) error {
 	log.Printf("Starting MCP server with SSE support on port %d...", port)
-	
+
 	// Create SSE handler
 	mcpSSEHandler := mcp.NewSSEHandler(func(request *http.Request) *mcp.Server {
 		return server
 	}, &mcp.SSEOptions{})
-	
+
 	// Wrap the SSE handler to ensure proper headers
 	sseHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set SSE headers
@@ -287,19 +287,19 @@ func RunServerSSE(server *mcp.Server, port int) error {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Cache-Control")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		// Delegate to the MCP SSE handler
 		mcpSSEHandler.ServeHTTP(w, r)
 	})
-	
+
 	// Set up HTTP routes
 	http.Handle("/sse", sseHandler)
-	
+
 	// Add health check endpoint
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -307,19 +307,19 @@ func RunServerSSE(server *mcp.Server, port int) error {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "healthy", "service": "sandboxed-mcp"}`))
 	})
-	
+
 	// Add CORS support for web clients
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		// Serve simple info page
 		if r.URL.Path == "/" {
 			w.Header().Set("Content-Type", "text/html")
@@ -360,10 +360,10 @@ func RunServerSSE(server *mcp.Server, port int) error {
 			`))
 			return
 		}
-		
+
 		http.NotFound(w, r)
 	})
-	
+
 	addr := fmt.Sprintf(":%d", port)
 	log.Printf("MCP SSE server listening on %s", addr)
 	return http.ListenAndServe(addr, nil)

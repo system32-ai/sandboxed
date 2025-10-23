@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/altgen-ai/sandboxed/cmd"
+	"github.com/system32-ai/sandboxed/cmd"
 )
 
 func main() {

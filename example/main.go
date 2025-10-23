@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 func main() {

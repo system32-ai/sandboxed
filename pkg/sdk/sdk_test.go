@@ -3,13 +3,13 @@ package sdk_test
 import (
 	"testing"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 func TestSimpleCodeRun(t *testing.T) {
 
 	sandbox, err := sdk.CreateSandbox("test", sdk.Python)
-	if err != nil {	
+	if err != nil {
 		t.Fatalf("failed to create sandbox: %v", err)
 	}
 

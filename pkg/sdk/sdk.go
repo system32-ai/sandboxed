@@ -4,11 +4,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/altgen-ai/sandboxed/pkg/k8sclient"
-	"github.com/altgen-ai/sandboxed/pkg/k8sclient/templates"
+	"github.com/system32-ai/sandboxed/pkg/k8sclient"
+	"github.com/system32-ai/sandboxed/pkg/k8sclient/templates"
 )
 
-	
 type Language string
 
 const (
@@ -59,7 +58,7 @@ func ToLanguage(lang string) (Language, error) {
 }
 
 type SandboxOption struct {
-	Name string
+	Name  string
 	Value interface{}
 }
 
@@ -81,14 +80,14 @@ func NewSandboxForDocker() Sandboxed {
 	}
 }
 
-type sandboxedImpl struct{
+type sandboxedImpl struct {
 	driver string
-	id string
-	lc *LanguageContainer
+	id     string
+	lc     *LanguageContainer
 }
 
 func CreateSandbox(name string, lang Language, opts ...SandboxOption) (Sandboxed, error) {
-	
+
 	s := &sandboxedImpl{
 		driver: "kubernetes",
 	}
@@ -102,11 +101,11 @@ func CreateSandbox(name string, lang Language, opts ...SandboxOption) (Sandboxed
 	}
 
 	lcVal := &LanguageContainer{
-		name:    name,
+		name:     name,
 		language: string(lang),
 		image:    image,
-		impl:    s,
-		opts:    opts,
+		impl:     s,
+		opts:     opts,
 	}
 
 	s.lc = lcVal
@@ -132,7 +131,7 @@ func CreateSandbox(name string, lang Language, opts ...SandboxOption) (Sandboxed
 			return nil, err
 		}
 	} else {
-		return nil	, errors.New("unsupported driver: " + s.driver)
+		return nil, errors.New("unsupported driver: " + s.driver)
 	}
 
 	var pod k8sclient.PodSpec
@@ -161,25 +160,23 @@ func CreateSandbox(name string, lang Language, opts ...SandboxOption) (Sandboxed
 		return nil, err
 	}
 
-	s.id  = podName
+	s.id = podName
 
 	return s, nil
 }
 
-
 func NewInstance(id string, opts ...SandboxOption) (Sandboxed, error) {
-	
+
 	s := &sandboxedImpl{
 		driver: "kubernetes",
 	}
-
 
 	lcVal := &LanguageContainer{
 		// name:    id,
 		// language: lang,
 		// image:    image,
-		impl:    s,
-		opts:    opts,
+		impl: s,
+		opts: opts,
 	}
 
 	s.lc = lcVal
@@ -188,7 +185,7 @@ func NewInstance(id string, opts ...SandboxOption) (Sandboxed, error) {
 	return s, nil
 }
 
-func (s *sandboxedImpl) Run( code string) (*Output, error) {
+func (s *sandboxedImpl) Run(code string) (*Output, error) {
 
 	var client *k8sclient.Client
 	var err error
@@ -214,7 +211,7 @@ func (s *sandboxedImpl) Run( code string) (*Output, error) {
 			return nil, err
 		}
 	} else {
-		return nil	, errors.New("unsupported driver: " + s.driver)
+		return nil, errors.New("unsupported driver: " + s.driver)
 	}
 
 	o, err := client.ExecCommand(podName, namespace, []string{"sh", "-c", code})
@@ -223,15 +220,14 @@ func (s *sandboxedImpl) Run( code string) (*Output, error) {
 	}
 
 	return &Output{
-		Result: o,
+		Result:   o,
 		Error:    "",
 		ExitCode: 0,
 	}, nil
 }
 
+func (s *sandboxedImpl) Exec(commands string) (*Output, error) {
 
-func (s *sandboxedImpl) Exec( commands string) (*Output, error) {
-	
 	var client *k8sclient.Client
 	var err error
 
@@ -239,7 +235,7 @@ func (s *sandboxedImpl) Exec( commands string) (*Output, error) {
 	for _, opt := range s.lc.opts {
 		mapOptions[opt.Name] = opt.Value
 	}
-	
+
 	var namespace string
 	var podName = s.id
 	ns, ok := mapOptions["namespace"].(string)
@@ -248,26 +244,26 @@ func (s *sandboxedImpl) Exec( commands string) (*Output, error) {
 	} else {
 		namespace = "default"
 	}
-	
+
 	if s.driver == "kubernetes" {
 		client, err = k8sclient.NewClient(namespace)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		return nil	, errors.New("unsupported driver: " + s.driver)
+		return nil, errors.New("unsupported driver: " + s.driver)
 	}
-	
+
 	// Write commands to a temporary file and execute it
 	filename := "/tmp/exec_script.sh"
 	writeCmd := []string{"sh", "-c", "cat > " + filename + " << 'EOF'\n" + commands + "\nEOF"}
-	
+
 	// First, write the commands to a file
 	_, err = client.ExecCommand(podName, namespace, writeCmd)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Make the file executable
 	chmodCmd := []string{"sh", "-c", "chmod +x " + filename}
 	_, err = client.ExecCommand(podName, namespace, chmodCmd)
@@ -285,17 +281,17 @@ func (s *sandboxedImpl) Exec( commands string) (*Output, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Output{
-		Result: o,
+		Result:   o,
 		Error:    "",
 		ExitCode: 0,
 	}, nil
 }
 
 func (s *sandboxedImpl) Destroy() error {
-	
-	var mapOptions = make(map[string]interface{})	
+
+	var mapOptions = make(map[string]interface{})
 	for _, opt := range s.lc.opts {
 		mapOptions[opt.Name] = opt.Value
 	}

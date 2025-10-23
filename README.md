@@ -70,7 +70,7 @@ package main
 import (
 	"log"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 func main() {
@@ -110,7 +110,7 @@ package main
 import (
 	"log"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 func main() {
@@ -176,7 +176,7 @@ package main
 import (
 	"log"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 func runLanguageExample(name, language, code string) {
@@ -243,7 +243,7 @@ package main
 import (
 	"log"
 
-	"github.com/altgen-ai/sandboxed/pkg/sdk"
+	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
 func main() {
@@ -952,7 +952,7 @@ GOOS=windows GOARCH=amd64 go build -o sandboxed-windows-amd64.exe .
 
 ```bash
 # Clone the repository
-git clone https://github.com/altgen-ai/sandboxed.git
+git clone https://github.com/system32-ai/sandboxed.git
 cd sandboxed
 
 # Install dependencies
