@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.6] - 2025-10-27
+
+### Changes
+
+- server has been updated ([dec66dd](https://github.com/system32-ai/sandboxed/commit/dec66dd))
+
+
 ## [v1.0.5] - 2025-10-27
 
 ### Changes
