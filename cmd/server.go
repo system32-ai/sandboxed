@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/altgen-ai/sandboxed/pkg/k8sclient"
+	"github.com/system32-ai/sandboxed/pkg/k8sclient"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
@@ -609,7 +609,7 @@ func init() {
 	"net/http"
 	"time"
 
-	"github.com/altgen-ai/sandboxed/pkg/k8sclient"
+	"github.com/system32-ai/sandboxed/pkg/k8sclient"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
