@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.5] - 2025-10-27
+
+### Changes
+
+- release updated ([981a2b8](https://github.com/system32-ai/sandboxed/commit/981a2b8))
+
+
 ## [v1.0.4] - 2025-10-27
 
 ### Changes
