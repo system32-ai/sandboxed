@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.4] - 2025-10-27
+
+### Changes
+
+- chore: prepare release v1.0.3 ([26eb780](https://github.com/system32-ai/sandboxed/commit/26eb780))
+- release updated ([a97f9af](https://github.com/system32-ai/sandboxed/commit/a97f9af))
+
+
 ## [v1.0.3] - 2025-10-27
 
 ### Changes
