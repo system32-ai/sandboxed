@@ -6,11 +6,13 @@
 set -e  # Exit on any error
 
 # Configuration
-REPO_OWNER="altgen-ai"
+REPO_OWNER="system32-ai"
 REPO_NAME="sandboxed"
 BINARY_NAME="sandboxed"
 BUILD_DIR="build"
 CHANGELOG_FILE="CHANGELOG.md"
+HOMEBREW_TAP_DIR="homebrew-tap"
+HOMEBREW_FORMULA_DIR="${HOMEBREW_TAP_DIR}/Formula"
 
 # Colors for output
 RED='\033[0;31m'
@@ -233,6 +235,209 @@ generate_changelog() {
     log_success "Changelog updated"
 }
 
+# Function to calculate SHA256 hash of a file
+calculate_sha256() {
+    local file="$1"
+    
+    if command_exists shasum; then
+        shasum -a 256 "$file" | cut -d' ' -f1
+    elif command_exists sha256sum; then
+        sha256sum "$file" | cut -d' ' -f1
+    else
+        log_error "Neither shasum nor sha256sum found"
+        exit 1
+    fi
+}
+
+# Function to generate Homebrew formula
+generate_homebrew_formula() {
+    local version="$1"
+    
+    log_info "Generating Homebrew formula for version $version..."
+    
+    # Create homebrew-tap directory structure
+    mkdir -p "$HOMEBREW_FORMULA_DIR"
+    
+    # Download URLs for macOS binaries
+    local macos_amd64_url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$version/${BINARY_NAME}-${version}-darwin-amd64.tar.gz"
+    local macos_arm64_url="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$version/${BINARY_NAME}-${version}-darwin-arm64.tar.gz"
+    
+    # Calculate SHA256 hashes for macOS binaries
+    local macos_amd64_file="$BUILD_DIR/${BINARY_NAME}-${version}-darwin-amd64.tar.gz"
+    local macos_arm64_file="$BUILD_DIR/${BINARY_NAME}-${version}-darwin-arm64.tar.gz"
+    
+    local macos_amd64_sha256=""
+    local macos_arm64_sha256=""
+    
+    if [[ -f "$macos_amd64_file" ]]; then
+        macos_amd64_sha256=$(calculate_sha256 "$macos_amd64_file")
+    else
+        log_warning "macOS AMD64 binary not found, SHA256 will be empty"
+    fi
+    
+    if [[ -f "$macos_arm64_file" ]]; then
+        macos_arm64_sha256=$(calculate_sha256 "$macos_arm64_file")
+    else
+        log_warning "macOS ARM64 binary not found, SHA256 will be empty"
+    fi
+    
+    # Generate the Homebrew formula
+    local formula_file="${HOMEBREW_FORMULA_DIR}/${BINARY_NAME}.rb"
+    
+    cat > "$formula_file" << EOF
+class Sandboxed < Formula
+  desc "A comprehensive sandbox platform for secure code execution in Kubernetes environments"
+  homepage "https://github.com/$REPO_OWNER/$REPO_NAME"
+  version "$version"
+  license "MIT"
+
+  on_macos do
+    if Hardware::CPU.intel?
+      url "$macos_amd64_url"
+      sha256 "$macos_amd64_sha256"
+
+      def install
+        bin.install "$BINARY_NAME"
+      end
+    end
+    if Hardware::CPU.arm?
+      url "$macos_arm64_url"
+      sha256 "$macos_arm64_sha256"
+
+      def install
+        bin.install "$BINARY_NAME"
+      end
+    end
+  end
+
+  on_linux do
+    if Hardware::CPU.intel?
+      url "https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$version/${BINARY_NAME}-${version}-linux-amd64.tar.gz"
+      # SHA256 will need to be updated manually for Linux builds
+      # sha256 "LINUX_AMD64_SHA256_HERE"
+
+      def install
+        bin.install "$BINARY_NAME"
+      end
+    end
+    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+      url "https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$version/${BINARY_NAME}-${version}-linux-arm64.tar.gz"
+      # SHA256 will need to be updated manually for Linux builds
+      # sha256 "LINUX_ARM64_SHA256_HERE"
+
+      def install
+        bin.install "$BINARY_NAME"
+      end
+    end
+  end
+
+  def caveats
+    <<~EOS
+      Sandboxed requires access to a Kubernetes cluster to function properly.
+      
+      Make sure you have kubectl configured and the necessary RBAC permissions:
+      - pods: create, delete, get, list, watch
+      - pods/exec: create
+      
+      For more information, visit: https://github.com/$REPO_OWNER/$REPO_NAME
+    EOS
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/$BINARY_NAME version")
+  end
+end
+EOF
+    
+    log_success "Homebrew formula generated: $formula_file"
+    
+    # Create a README for the tap
+    local readme_file="${HOMEBREW_TAP_DIR}/README.md"
+    cat > "$readme_file" << EOF
+# Homebrew Tap for Sandboxed
+
+This is the official Homebrew tap for [Sandboxed](https://github.com/$REPO_OWNER/$REPO_NAME).
+
+## Installation
+
+\`\`\`bash
+# Add the tap
+brew tap $REPO_OWNER/sandboxed
+
+# Install sandboxed
+brew install sandboxed
+\`\`\`
+
+## Usage
+
+\`\`\`bash
+# Show version
+sandboxed version
+
+# Start REST API server
+sandboxed server
+
+# Start MCP server for AI integration
+sandboxed mcp
+
+# Get help
+sandboxed --help
+\`\`\`
+
+## Requirements
+
+Sandboxed requires access to a Kubernetes cluster. Make sure you have:
+
+1. kubectl installed and configured
+2. Proper RBAC permissions for pod management
+3. Access to a Kubernetes cluster
+
+For detailed setup instructions, see the [main repository](https://github.com/$REPO_OWNER/$REPO_NAME).
+
+## Updating
+
+\`\`\`bash
+# Update the tap
+brew update
+
+# Upgrade sandboxed
+brew upgrade sandboxed
+\`\`\`
+EOF
+    
+    log_success "Homebrew tap README generated: $readme_file"
+    
+    # Display the generated formula content
+    log_info "Generated Homebrew formula content:"
+    echo "----------------------------------------"
+    cat "$formula_file"
+    echo "----------------------------------------"
+    
+    # Provide instructions for updating the tap repository
+    cat << EOF
+
+📋 To publish this Homebrew formula:
+
+1. Create a new repository named 'homebrew-sandboxed' under $REPO_OWNER organization
+2. Copy the contents of '$HOMEBREW_TAP_DIR' to the repository root
+3. Commit and push the changes:
+   
+   cd $HOMEBREW_TAP_DIR
+   git init
+   git add .
+   git commit -m "Add sandboxed formula $version"
+   git remote add origin https://github.com/$REPO_OWNER/homebrew-sandboxed.git
+   git push -u origin main
+
+4. Users can then install with:
+   brew tap $REPO_OWNER/sandboxed
+   brew install sandboxed
+
+📝 Note: Linux SHA256 hashes need to be calculated and added manually to the formula.
+
+EOF
+}
+
 # Function to create GitHub release
 create_github_release() {
     local version="$1"
@@ -353,16 +558,26 @@ main() {
     # Create GitHub release
     create_github_release "$next_version" "$is_prerelease"
     
+    # Generate Homebrew formula
+    generate_homebrew_formula "$next_version"
+    
     # Cleanup
     rm -rf "$BUILD_DIR"
     
     log_success "Release $next_version completed successfully! 🎉"
     log_info "View the release at: https://github.com/$REPO_OWNER/$REPO_NAME/releases/tag/$next_version"
+    log_info "Homebrew formula generated in: $HOMEBREW_TAP_DIR"
 }
 
 # Script usage
 usage() {
     echo "Usage: $0 [version_type|version] [prerelease]"
+    echo ""
+    echo "This script automates the release process including:"
+    echo "  • Cross-platform binary builds (Linux, macOS, Windows)"
+    echo "  • Changelog generation"
+    echo "  • GitHub release creation"
+    echo "  • Homebrew tap formula generation"
     echo ""
     echo "Arguments:"
     echo "  version_type    One of: patch (default), minor, major"
@@ -375,6 +590,11 @@ usage() {
     echo "  $0 major              # Create major release"
     echo "  $0 v1.5.0             # Create specific version"
     echo "  $0 patch true         # Create patch prerelease"
+    echo ""
+    echo "Generated files:"
+    echo "  • Cross-platform binaries in build/"
+    echo "  • Homebrew formula in homebrew-tap/Formula/sandboxed.rb"
+    echo "  • Updated CHANGELOG.md"
     echo ""
 }
 
