@@ -140,11 +140,7 @@ func setupRoutes(r *gin.Engine, k8sClient *k8sclient.Client) {
 				"sandbox_create":   "POST /api/v1/sandbox/create - Create sandbox",
 				"sandbox_execute":  "POST /api/v1/execute/:sandboxID - Execute in sandbox",
 				"sandbox_destroy":  "POST /api/v1/sandbox/destroy - Destroy sandbox",
-				"pods":            "GET /api/v1/pods - List pods",
-				"create_pod":      "POST /api/v1/pods - Create pod",
-				"delete_pod":      "DELETE /api/v1/pods/:name - Delete pod",
-				"get_pod":         "GET /api/v1/pods/:name - Get pod details",
-				"pod_logs":        "GET /api/v1/pods/:name/logs - Get pod logs",
+	
 			},
 		})
 	})
