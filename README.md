@@ -2,6 +2,8 @@
 
 A comprehensive sandbox platform for secure code execution in Kubernetes environments. Provides REST API, MCP (Model Context Protocol) server with SSE support, and Go SDK for running code in isolated containers.
 
+
+
 ## Features
 
 - 🔒 **Secure Execution**: Code runs in isolated Kubernetes pods with RBAC controls
@@ -14,7 +16,7 @@ A comprehensive sandbox platform for secure code execution in Kubernetes environ
 - 📦 **Enhanced Code Execution**: File-based script execution with language-specific interpreters
 ## Getting Started
 
-### Prerequisites
+### Prerequisites for building
 - Go 1.24 or later
 - Kubernetes cluster access (for sandbox execution)
 - Docker (optional, for containerized deployment)
