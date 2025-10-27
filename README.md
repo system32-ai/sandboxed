@@ -4,6 +4,8 @@ A comprehensive sandbox platform for secure code execution in Kubernetes environ
 
 
 
+<img width="3267" height="632" alt="Group 17 (3)" src="https://github.com/user-attachments/assets/0ce72715-9509-474e-9e8f-e09f5c88c466" />
+
 ## Features
 
 - 🔒 **Secure Execution**: Code runs in isolated Kubernetes pods with RBAC controls
