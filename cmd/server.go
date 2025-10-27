@@ -18,15 +18,6 @@ type ExecuteRequest struct {
 	Labels    map[string]string `json:"labels,omitempty"`
 }
 
-// ExecuteResponse represents a code execution response
-type ExecuteResponse struct {
-	Success   bool     `json:"success"`
-	Output    []string `json:"output,omitempty"`
-	Error     string   `json:"error,omitempty"`
-	PodName   string   `json:"pod_name,omitempty"`
-	Timestamp string   `json:"timestamp"`
-}
-
 // SandboxRequest represents a sandbox creation request
 type SandboxRequest struct {
 	Language  string            `json:"language" binding:"required"`
@@ -45,76 +36,6 @@ type SandboxResponse struct {
 // PodListResponse represents a pod list response
 type PodListResponse struct {
 	Pods []PodInfo `json:"pods"`
-}
-
-// PodInfo represents basic pod information
-type PodInfo struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	Status    string            `json:"status"`
-	Image     string            `json:"image,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
-	Created   string            `json:"created"`
-}
-
-var serverCmd = &cobra.Command{
-	Use:   "server",
-	Short: "Start the sandboxed HTTP server",
-	Long: `Start the sandboxed HTTP server to handle code execution and Kubernetes operations via REST API.
-	
-The server provides endpoints for:
-- Code execution in Kubernetes pods
-- Sandbox management (create, execute, destroy)
-- Pod management (list, create, delete)
-- Health checks
-
-Examples:
-  sandboxed server                    # Start on default port 8080
-  sandboxed server --port 3000       # Start on custom port
-  sandboxed server --debug           # Start in debug mode`,
-	Run: func(cmd *cobra.Command, args []string) {
-		port, _ := cmd.Flags().GetInt("port")
-		debug, _ := cmd.Flags().GetBool("debug")
-		namespace, _ := cmd.Flags().GetString("namespace")
-
-		// Set gin mode
-		if !debug {
-			gin.SetMode(gin.ReleaseMode)
-		}
-
-		// Create gin router
-		r := gin.Default()
-
-		// Add middleware
-		r.Use(gin.Logger())
-		r.Use(gin.Recovery())
-		r.Use(corsMiddleware())
-
-		// Initialize Kubernetes client
-		k8sClient, err := k8sclient.NewClient(namespace)
-		if err != nil {
-			fmt.Printf("Warning: Kubernetes client initialization failed: %v\n", err)
-			fmt.Println("Kubernetes endpoints will not be available")
-			k8sClient = nil
-		}
-
-		// Setup routes
-		setupRoutes(r, k8sClient)
-
-		// Start server
-		addr := fmt.Sprintf(":%d", port)
-		fmt.Printf("Starting sandboxed server on %s\n", addr)
-		if debug {
-			fmt.Println("Debug mode enabled")
-		}
-		if k8sClient != nil {
-			fmt.Printf("Kubernetes integration enabled (namespace: %s)\n", namespace)
-		}
-
-		if err := r.Run(addr); err != nil {
-			fmt.Printf("Failed to start server: %v\n", err)
-		}
-	},
 }
 
 func setupRoutes(r *gin.Engine, k8sClient *k8sclient.Client) {
@@ -181,31 +102,6 @@ func corsMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-func executeCodeHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	if k8sClient == nil {
-		c.JSON(http.StatusServiceUnavailable, ExecuteResponse{
-			Success:   false,
-			Error:     "Kubernetes client not available",
-			Timestamp: time.Now().Format(time.RFC3339),
-		})
-		return
-	}
-
-	var req ExecuteRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ExecuteResponse{
-			Success:   false,
-			Error:     fmt.Sprintf("Invalid request: %v", err),
-			Timestamp: time.Now().Format(time.RFC3339),
-		})
-		return
-	}
-
-	// Execute code and return result
-	result := executeCode(k8sClient, req)
-	c.JSON(getStatusCode(result.Success), result)
 }
 
 func createSandboxHandler(c *gin.Context, k8sClient *k8sclient.Client) {
@@ -469,133 +365,6 @@ func getStatusCode(success bool) int {
 	return http.StatusInternalServerError
 }
 
-// Keep existing handlers for pod management
-func listPodsHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	namespace := c.Query("namespace")
-
-	pods, err := k8sClient.ListPods(namespace)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to list pods: %v", err),
-		})
-		return
-	}
-
-	var podInfos []PodInfo
-	for _, pod := range pods.Items {
-		image := ""
-		if len(pod.Spec.Containers) > 0 {
-			image = pod.Spec.Containers[0].Image
-		}
-
-		podInfos = append(podInfos, PodInfo{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-			Status:    string(pod.Status.Phase),
-			Image:     image,
-			Labels:    pod.Labels,
-			Created:   pod.CreationTimestamp.Format(time.RFC3339),
-		})
-	}
-
-	c.JSON(http.StatusOK, PodListResponse{
-		Pods: podInfos,
-	})
-}
-
-func createPodHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	var spec k8sclient.PodSpec
-	if err := c.ShouldBindJSON(&spec); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("Invalid pod spec: %v", err),
-		})
-		return
-	}
-
-	pod, err := k8sClient.CreatePod(spec)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to create pod: %v", err),
-		})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message":   "Pod created successfully",
-		"pod_name":  pod.Name,
-		"namespace": pod.Namespace,
-	})
-}
-
-func deletePodHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	podName := c.Param("name")
-	namespace := c.Query("namespace")
-	force := c.Query("force") == "true"
-
-	var err error
-	if force {
-		err = k8sClient.ForceDeletePod(podName, namespace)
-	} else {
-		err = k8sClient.DeletePod(podName, namespace)
-	}
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to delete pod: %v", err),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Pod %s deleted successfully", podName),
-	})
-}
-
-func getPodHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	podName := c.Param("name")
-	namespace := c.Query("namespace")
-
-	pod, err := k8sClient.GetPod(podName, namespace)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": fmt.Sprintf("Pod not found: %v", err),
-		})
-		return
-	}
-
-	image := ""
-	if len(pod.Spec.Containers) > 0 {
-		image = pod.Spec.Containers[0].Image
-	}
-
-	c.JSON(http.StatusOK, PodInfo{
-		Name:      pod.Name,
-		Namespace: pod.Namespace,
-		Status:    string(pod.Status.Phase),
-		Image:     image,
-		Labels:    pod.Labels,
-		Created:   pod.CreationTimestamp.Format(time.RFC3339),
-	})
-}
-
-func getPodLogsHandler(c *gin.Context, k8sClient *k8sclient.Client) {
-	podName := c.Param("name")
-	namespace := c.Query("namespace")
-
-	logs, err := k8sClient.GetPodLogs(podName, namespace)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to get pod logs: %v", err),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"pod_name": podName,
-		"logs":     logs,
-	})
-}
-
 func init() {
 	rootCmd.AddCommand(serverCmd)
 
@@ -605,14 +374,6 @@ func init() {
 	serverCmd.Flags().StringP("namespace", "n", "", "Default Kubernetes namespace")
 }
 
-// ExecuteRequest represents a code execution request
-type ExecuteRequest struct {
-	Language  string            `json:"language" binding:"required"`
-	Code      string            `json:"code" binding:"required"`
-	Namespace string            `json:"namespace,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
-}
-
 // ExecuteResponse represents a code execution response
 type ExecuteResponse struct {
 	Success   bool     `json:"success"`
@@ -620,11 +381,6 @@ type ExecuteResponse struct {
 	Error     string   `json:"error,omitempty"`
 	PodName   string   `json:"pod_name,omitempty"`
 	Timestamp string   `json:"timestamp"`
-}
-
-// PodListResponse represents a pod list response
-type PodListResponse struct {
-	Pods []PodInfo `json:"pods"`
 }
 
 // PodInfo represents basic pod information
@@ -734,21 +490,6 @@ Examples:
 			fmt.Printf("Failed to start server: %v\n", err)
 		}
 	},
-}
-
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
 }
 
 func executeCodeHandler(c *gin.Context, k8sClient *k8sclient.Client) {
