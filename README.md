@@ -1,6 +1,9 @@
 # Sandboxed
 
 A comprehensive sandbox platform for secure code execution in Kubernetes environments. Provides REST API, MCP (Model Context Protocol) server with SSE support, and Go SDK for running code in isolated containers.
+
+
+
 <img width="3267" height="632" alt="Group 17 (3)" src="https://github.com/user-attachments/assets/0ce72715-9509-474e-9e8f-e09f5c88c466" />
 
 ## Features
