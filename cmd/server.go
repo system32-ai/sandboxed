@@ -165,22 +165,6 @@ func setupRoutes(r *gin.Engine, k8sClient *k8sclient.Client) {
 				destroySandboxHandler(c, k8sClient)
 			})
 			
-			// Pod management endpoints
-			v1.GET("/pods", func(c *gin.Context) {
-				listPodsHandler(c, k8sClient)
-			})
-			v1.POST("/pods", func(c *gin.Context) {
-				createPodHandler(c, k8sClient)
-			})
-			v1.DELETE("/pods/:name", func(c *gin.Context) {
-				deletePodHandler(c, k8sClient)
-			})
-			v1.GET("/pods/:name", func(c *gin.Context) {
-				getPodHandler(c, k8sClient)
-			})
-			v1.GET("/pods/:name/logs", func(c *gin.Context) {
-				getPodLogsHandler(c, k8sClient)
-			})
 		}
 	}
 }
