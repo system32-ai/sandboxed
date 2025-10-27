@@ -37,8 +37,6 @@ The `sandboxed` CLI provides several commands for different use cases:
 
 - **`mcp`**: Start MCP (Model Context Protocol) server for AI assistant integration
 - **`server`**: Start REST API server for HTTP-based sandbox management
-- **`exec [command]`**: Execute shell commands with optional directory and environment settings
-- **`code [path]`**: Open files or directories in a code editor (VS Code by default)
 - **`version`**: Display application version
 - **`help`**: Show help for any command
 
