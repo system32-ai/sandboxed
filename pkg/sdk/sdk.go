@@ -1,9 +1,13 @@
 package sdk
 
 import (
+	"context"
 	"errors"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/sashabaranov/go-openai"
 	"github.com/system32-ai/sandboxed/pkg/k8sclient"
 	"github.com/system32-ai/sandboxed/pkg/k8sclient/templates"
 )
@@ -55,6 +59,67 @@ func ToLanguage(lang string) (Language, error) {
 		return "", err
 	}
 	return Language(lang), nil
+}
+
+// DetectLanguage uses GPT to analyze the code string and determine the programming language
+func DetectLanguage(code string) (Language, error) {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		return "", errors.New("OPENAI_API_KEY environment variable is required for automatic language detection")
+	}
+
+	client := openai.NewClient(apiKey)
+
+	prompt := `Analyze the following code and determine the primary programming language it is written in. 
+Respond with only the language name in lowercase (one of: python, go, node, java, ruby, php, rust).
+
+Code:
+` + code
+
+	resp, err := client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model: openai.GPT4oMini,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			MaxTokens:   10,
+			Temperature: 0,
+		},
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.Choices) == 0 {
+		return "", errors.New("no response from GPT API")
+	}
+
+	detectedLang := strings.TrimSpace(strings.ToLower(resp.Choices[0].Message.Content))
+
+	// Map the response to our Language constants
+	switch detectedLang {
+	case "python":
+		return Python, nil
+	case "go":
+		return Go, nil
+	case "node", "javascript", "js":
+		return Node, nil
+	case "java":
+		return Java, nil
+	case "ruby":
+		return Ruby, nil
+	case "php":
+		return PHP, nil
+	case "rust":
+		return Rust, nil
+	default:
+		return "", errors.New("unable to detect supported programming language from code")
+	}
 }
 
 type SandboxOption struct {
@@ -163,6 +228,16 @@ func CreateSandbox(name string, lang Language, opts ...SandboxOption) (Sandboxed
 	s.id = podName
 
 	return s, nil
+}
+
+// CreateSandboxAuto creates a sandbox with automatic language detection from the provided code
+func CreateSandboxAuto(name string, code string, opts ...SandboxOption) (Sandboxed, error) {
+	lang, err := DetectLanguage(code)
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateSandbox(name, lang, opts...)
 }
 
 func NewInstance(id string, opts ...SandboxOption) (Sandboxed, error) {

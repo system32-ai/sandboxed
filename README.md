@@ -77,7 +77,7 @@ import (
 
 func main() {
 	// Create a Python sandbox
-	sandbox, err := sdk.CreateSandbox("my-python-sandbox", "python")
+	sandbox, err := sdk.CreateSandbox("my-python-sandbox", sdk.Python)
 	if err != nil {
 		log.Fatalf("failed to create sandbox: %v", err)
 	}
@@ -103,6 +103,58 @@ print(json.dumps(data, indent=2))
 	log.Printf("Exit Code: %d", output.ExitCode)
 }
 ```
+
+### Automatic Language Detection
+
+The SDK can automatically detect the programming language from your code using GPT, eliminating the need to specify it manually.
+
+**Prerequisites:** Set the `OPENAI_API_KEY` environment variable with your OpenAI API key.
+
+```go
+package main
+
+import (
+	"log"
+	"os"
+
+	"github.com/system32-ai/sandboxed/pkg/sdk"
+)
+
+func main() {
+	// Set OpenAI API key
+	os.Setenv("OPENAI_API_KEY", "your-openai-api-key-here")
+
+	// Code with automatic language detection
+	pythonCode := `
+import json
+import sys
+
+data = {"message": "Hello, World!", "python_version": sys.version}
+print(json.dumps(data, indent=2))
+`
+
+	// Create sandbox with GPT-detected language
+	sandbox, err := sdk.CreateSandboxAuto("auto-python-sandbox", pythonCode)
+	if err != nil {
+		log.Fatalf("failed to create sandbox: %v", err)
+	}
+
+	// Always clean up resources
+	defer sandbox.Destroy()
+
+	output, err := sandbox.Exec(pythonCode)
+	if err != nil {
+		log.Fatalf("failed to run code: %v", err)
+	}
+
+	log.Printf("Output: %s", output.Result)
+	log.Printf("Exit Code: %d", output.ExitCode)
+}
+```
+
+The `CreateSandboxAuto` function uses GPT-4 to analyze the code and automatically determine the programming language. Supported languages: Python, Go, JavaScript, Java, Rust, Ruby, PHP.
+
+**Note:** This feature requires an active OpenAI API key and will make API calls to OpenAI's services.
 
 ### Advanced Usage with Options
 
@@ -181,10 +233,10 @@ import (
 	"github.com/system32-ai/sandboxed/pkg/sdk"
 )
 
-func runLanguageExample(name, language, code string) {
+func runLanguageExample(name string, lang sdk.Language, code string) {
 	log.Printf("=== %s Example ===", name)
 	
-	sandbox, err := sdk.CreateSandbox(name+"-sandbox", language)
+	sandbox, err := sdk.CreateSandbox(name+"-sandbox", lang)
 	if err != nil {
 		log.Printf("Failed to create %s sandbox: %v", name, err)
 		return
@@ -208,7 +260,7 @@ print("Hello from Python!")
 import sys
 print(f"Python version: {sys.version}")
 `
-	runLanguageExample("Python", "python", pythonCode)
+	runLanguageExample("Python", sdk.Python, pythonCode)
 
 	// JavaScript/Node.js example
 	jsCode := `
@@ -216,7 +268,7 @@ console.log("Hello from Node.js!");
 console.log("Node version:", process.version);
 console.log("Platform:", process.platform);
 `
-	runLanguageExample("JavaScript", "javascript", jsCode)
+	runLanguageExample("JavaScript", sdk.Node, jsCode)
 
 	// Go example
 	goCode := `
@@ -233,7 +285,7 @@ func main() {
 	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 }
 `
-	runLanguageExample("Go", "go", goCode)
+	runLanguageExample("Go", sdk.Go, goCode)
 }
 ```
 
