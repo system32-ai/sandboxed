@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.8] - 2026-01-04
+
+### Changes
+
+- . ([cb06e7d](https://github.com/system32-ai/sandboxed/commit/cb06e7d))
+
+
 ## [v1.0.7] - 2026-01-04
 
 ### Changes
