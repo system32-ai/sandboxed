@@ -22,9 +22,9 @@ A comprehensive sandbox platform for secure code execution in Kubernetes environ
 
 #### macOS (Intel)
 ```bash
-curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.0-darwin-amd64.tar.gz -o sandboxed.tar.gz
+curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.8/sandboxed-v1.0.0-darwin-amd64.tar.gz -o sandboxed.tar.gz
 tar -xzf sandboxed.tar.gz
-mv sandboxed-v1.0.7-darwin-arm64 sandboxed
+mv sandboxed-v1.0.8-darwin-arm64 sandboxed
 sudo mv sandboxed /usr/local/bin/
 sudo chmod +x /usr/local/bin/sandboxed
 rm sandboxed.tar.gz
@@ -33,9 +33,9 @@ sandboxed version
 
 #### macOS (Apple Silicon)
 ```bash
-curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.7-darwin-arm64.tar.gz -o sandboxed.tar.gz
+curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.8/sandboxed-v1.0.8-darwin-arm64.tar.gz -o sandboxed.tar.gz
 tar -xzf sandboxed.tar.gz
-mv sandboxed-v1.0.7-darwin-arm64 sandboxed
+mv sandboxed-v1.0.8-darwin-arm64 sandboxed
 sudo mv sandboxed /usr/local/bin/
 sudo chmod +x /usr/local/bin/sandboxed
 rm sandboxed.tar.gz
@@ -44,9 +44,9 @@ sandboxed version
 
 #### Linux
 ```bash
-curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.0-linux-amd64.tar.gz -o sandboxed.tar.gz
+curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.8/sandboxed-v1.0.0-linux-amd64.tar.gz -o sandboxed.tar.gz
 tar -xzf sandboxed.tar.gz
-mv sandboxed-v1.0.7-darwin-arm64 sandboxed
+mv sandboxed-v1.0.8-darwin-arm64 sandboxed
 sudo mv sandboxed /usr/local/bin/
 sudo chmod +x /usr/local/bin/sandboxed
 rm sandboxed.tar.gz
@@ -114,28 +114,6 @@ sandboxed server
 curl -X POST http://localhost:8080/execute \
   -H "Content-Type: application/json" \
   -d '{"language": "python", "code": "print(\"Hello, World!\")"}'
-```
-
-### Building from Source (Development)
-
-If you're contributing to the project or need the latest development version:
-
-```bash
-# Clone the repository
-git clone https://github.com/system32-ai/sandboxed.git
-cd sandboxed
-
-# Install dependencies
-go mod download
-
-# Build the binary
-go build -o sandboxed .
-
-# Run tests
-go test ./...
-
-# Optional: Install to system PATH
-sudo mv sandboxed /usr/local/bin/
 ```
 
 ## CLI Commands
@@ -1058,19 +1036,6 @@ kubectl logs -l app=sandboxed -f
 
 The project includes automated release pipelines for cross-platform distribution:
 
-### Automated Releases
-
-Create releases automatically by pushing tags:
-
-```bash
-# Create and push a release tag
-git tag v1.0.7
-git push origin v1.0.7
-
-# Or use the release script
-./scripts/release.sh v1.0.7
-```
-
 ### Available Distributions
 
 Each release provides:
@@ -1089,18 +1054,6 @@ docker pull ghcr.io/altgen-ai/sandboxed:latest
 docker run -p 8080:8080 ghcr.io/altgen-ai/sandboxed:latest
 ```
 
-### Manual Building
-
-```bash
-# Build for current platform
-go build -o sandboxed .
-
-# Cross-compile for different platforms
-GOOS=linux GOARCH=amd64 go build -o sandboxed-linux-amd64 .
-GOOS=darwin GOARCH=arm64 go build -o sandboxed-darwin-arm64 .
-GOOS=windows GOARCH=amd64 go build -o sandboxed-windows-amd64.exe .
-```
-
 ## Contributing
 
 1. Fork the repository
@@ -1108,26 +1061,6 @@ GOOS=windows GOARCH=amd64 go build -o sandboxed-windows-amd64.exe .
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/system32-ai/sandboxed.git
-cd sandboxed
-
-# Install dependencies
-go mod download
-
-# Run tests
-go test ./...
-
-# Build locally
-go build -o sandboxed .
-
-# Run with development flags
-./sandboxed mcp --sse --port 8080
-```
 
 ## License
 
