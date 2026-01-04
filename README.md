@@ -16,19 +16,126 @@ A comprehensive sandbox platform for secure code execution in Kubernetes environ
 - 🛠️ **Flexible Configuration**: Customizable namespaces, labels, and resource limits
 - ⚡ **SSE Support**: Server-Sent Events transport for web-based MCP clients
 - 📦 **Enhanced Code Execution**: File-based script execution with language-specific interpreters
+## Installation
+
+### Direct Download (macOS/Linux)
+
+#### macOS (Intel)
+```bash
+curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.0-darwin-amd64.tar.gz -o sandboxed.tar.gz
+tar -xzf sandboxed.tar.gz
+mv sandboxed-v1.0.7-darwin-arm64 sandboxed
+sudo mv sandboxed /usr/local/bin/
+sudo chmod +x /usr/local/bin/sandboxed
+rm sandboxed.tar.gz
+sandboxed version
+```
+
+#### macOS (Apple Silicon)
+```bash
+curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.7-darwin-arm64.tar.gz -o sandboxed.tar.gz
+tar -xzf sandboxed.tar.gz
+mv sandboxed-v1.0.7-darwin-arm64 sandboxed
+sudo mv sandboxed /usr/local/bin/
+sudo chmod +x /usr/local/bin/sandboxed
+rm sandboxed.tar.gz
+sandboxed version
+```
+
+#### Linux
+```bash
+curl -L https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.0-linux-amd64.tar.gz -o sandboxed.tar.gz
+tar -xzf sandboxed.tar.gz
+mv sandboxed-v1.0.7-darwin-arm64 sandboxed
+sudo mv sandboxed /usr/local/bin/
+sudo chmod +x /usr/local/bin/sandboxed
+rm sandboxed.tar.gz
+sandboxed version
+```
+
+### Pre-built Binaries
+
+Download the latest release from [GitHub Releases](https://github.com/system32-ai/sandboxed/releases):
+
+1. Go to the [releases page](https://github.com/system32-ai/sandboxed/releases)
+2. Download the appropriate archive for your platform:
+   - `sandboxed-{version}-linux-amd64.tar.gz` for Linux
+   - `sandboxed-{version}-darwin-amd64.tar.gz` for macOS (Intel)
+   - `sandboxed-{version}-darwin-arm64.tar.gz` for macOS (Apple Silicon)
+   - `sandboxed-{version}-windows-amd64.zip` for Windows
+3. Extract the archive and place the binary in your PATH
+
+```bash
+# Example for Linux/macOS
+tar -xzf sandboxed-1.0.0-linux-amd64.tar.gz
+sudo mv sandboxed /usr/local/bin/
+sandboxed version
+```
+
+### Build from Source
+
+If you prefer to build from source or need the latest development version:
+
+```bash
+# Clone the repository
+git clone https://github.com/system32-ai/sandboxed.git
+cd sandboxed
+
+# Install dependencies
+go mod download
+
+# Build the binary
+go build -o sandboxed .
+
+# Optional: Install to system PATH
+sudo mv sandboxed /usr/local/bin/
+```
+
 ## Getting Started
 
-### Prerequisites for building
-- Go 1.24 or later
-- Kubernetes cluster access (for sandbox execution)
-- Docker (optional, for containerized deployment)
+### Prerequisites
 
+Before using Sandboxed, ensure you have:
 
+- **Kubernetes Cluster**: Access to a Kubernetes cluster with proper RBAC permissions
+- **kubectl**: Configured to connect to your cluster
+- **Sandboxed CLI**: Installed using one of the methods above
 
-### Building the Application
+### Quick Start
+
 ```bash
-go build -o sandboxed
-./sandboxed --help
+# Verify installation
+sandboxed version
+
+# Start the REST API server
+sandboxed server
+
+# In another terminal, test the API
+curl -X POST http://localhost:8080/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language": "python", "code": "print(\"Hello, World!\")"}'
+```
+
+### Building from Source (Development)
+
+If you're contributing to the project or need the latest development version:
+
+```bash
+# Clone the repository
+git clone https://github.com/system32-ai/sandboxed.git
+cd sandboxed
+
+# Install dependencies
+go mod download
+
+# Build the binary
+go build -o sandboxed .
+
+# Run tests
+go test ./...
+
+# Optional: Install to system PATH
+sudo mv sandboxed /usr/local/bin/
 ```
 
 ## CLI Commands
@@ -957,11 +1064,11 @@ Create releases automatically by pushing tags:
 
 ```bash
 # Create and push a release tag
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.7
+git push origin v1.0.7
 
 # Or use the release script
-./scripts/release.sh v1.0.0
+./scripts/release.sh v1.0.7
 ```
 
 ### Available Distributions

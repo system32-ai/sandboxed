@@ -1,21 +1,21 @@
 class Sandboxed < Formula
   desc "A comprehensive sandbox platform for secure code execution in Kubernetes environments"
   homepage "https://github.com/system32-ai/sandboxed"
-  version "v1.0.6"
+  version "v1.0.7"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.6/sandboxed-v1.0.6-darwin-amd64.tar.gz"
-      sha256 "d95910b068e28a9a610017fa6b47523eade395264b4df3ae281245a49f50f619"
+      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.7-darwin-amd64.tar.gz"
+      sha256 "de86e5889c1b111dc33084d9323e7123719e14df45a3bdb97db15ba73b451d7e"
 
       def install
         bin.install "sandboxed"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.6/sandboxed-v1.0.6-darwin-arm64.tar.gz"
-      sha256 "588e6fcaf7e8726d8b557ae49cb217c324cf97fdc9be1ff1307623b7a3df7521"
+      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.7-darwin-arm64.tar.gz"
+      sha256 "cd2ad35b0d8f98d5cc5881eea5f289f27b3d0fa7a041768c69861781203302f7"
 
       def install
         bin.install "sandboxed"
@@ -25,7 +25,7 @@ class Sandboxed < Formula
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.6/sandboxed-v1.0.6-linux-amd64.tar.gz"
+      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.7-linux-amd64.tar.gz"
       # SHA256 will need to be updated manually for Linux builds
       # sha256 "LINUX_AMD64_SHA256_HERE"
 
@@ -34,7 +34,7 @@ class Sandboxed < Formula
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.6/sandboxed-v1.0.6-linux-arm64.tar.gz"
+      url "https://github.com/system32-ai/sandboxed/releases/download/v1.0.7/sandboxed-v1.0.7-linux-arm64.tar.gz"
       # SHA256 will need to be updated manually for Linux builds
       # sha256 "LINUX_ARM64_SHA256_HERE"
 

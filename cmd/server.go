@@ -706,12 +706,3 @@ func getPodLogsHandler(c *gin.Context, k8sClient *k8sclient.Client) {
 		"logs":     logs,
 	})
 }
-
-func init() {
-	rootCmd.AddCommand(serverCmd)
-
-	// Add flags
-	serverCmd.Flags().IntP("port", "p", 8080, "Port to run the server on")
-	serverCmd.Flags().BoolP("debug", "d", false, "Enable debug mode")
-	serverCmd.Flags().StringP("namespace", "n", "", "Default Kubernetes namespace")
-}

@@ -12,7 +12,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number of sandboxed",
 	Long:  `All software has versions. This is sandboxed's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sandboxed v1.0.0")
+		fmt.Println("sandboxed v1.0.8")
 	},
 }
 
