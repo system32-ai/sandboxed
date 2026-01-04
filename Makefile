@@ -118,6 +118,18 @@ uninstall:
 dev: fmt vet lint test build
 	@echo "Development workflow complete"
 
+# Create a release (usage: make release VERSION=1.2.3)
+.PHONY: release
+release:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: VERSION is required. Usage: make release VERSION=1.2.3"; \
+		exit 1; \
+	fi
+	@echo "Creating release $(VERSION)..."
+	@chmod +x scripts/release.sh
+	./scripts/release.sh $(VERSION)
+	@echo "Release $(VERSION) created successfully"
+
 # Show help
 .PHONY: help
 help:
@@ -137,9 +149,11 @@ help:
 	@echo "  install      - Install binary to GOPATH/bin"
 	@echo "  uninstall    - Remove binary from GOPATH/bin"
 	@echo "  dev          - Run development workflow (fmt, vet, lint, test, build)"
+	@echo "  release      - Create a GitHub release (requires VERSION=x.y.z)"
 	@echo "  help         - Show this help message"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make build"
 	@echo "  make run-args ARGS=\"greet Alice --uppercase\""
 	@echo "  make VERSION=2.0.0 build"
+	@echo "  make release VERSION=1.2.3"
