@@ -122,7 +122,7 @@ The `sandboxed` CLI provides several commands for different use cases:
 
 ### Core Commands
 
-- **`mcp`**: Start MCP (Model Context Protocol) server for AI assistant integration
+- **`mcp`**: Start MCP (Model Context Protocol) server for AI assistant integration (supports stdio and SSE transport modes)
 - **`server`**: Start REST API server for HTTP-based sandbox management
 - **`version`**: Display application version
 - **`help`**: Show help for any command
@@ -136,8 +136,11 @@ The `sandboxed` CLI provides several commands for different use cases:
 # Start REST API server on custom port
 ./sandboxed server --port 9000
 
-# Start MCP server for AI integration
+# Start MCP server for AI integration (stdio mode - default)
 ./sandboxed mcp
+
+# Start MCP server in SSE mode for web clients
+./sandboxed mcp --sse --port 8080
 
 # Get help for any command
 ./sandboxed server --help
@@ -620,6 +623,43 @@ go run main.go mcp --sse --port 8080
 ```
 
 The SSE mode provides a web interface at `http://localhost:8080` with API documentation and connection details.
+
+### Choosing the Right Transport Mode
+
+#### Stdio Mode (Default)
+**Best for:** AI assistants, IDE integrations, and command-line tools
+- **Transport:** Standard input/output streams
+- **Protocol:** JSON-RPC 2.0 over stdio
+- **Use cases:**
+  - Integration with AI coding assistants (GitHub Copilot, Claude, etc.)
+  - VS Code extensions and IDE plugins
+  - Command-line MCP clients
+  - Direct process communication
+- **Advantages:**
+  - No network configuration required
+  - Secure (no exposed ports)
+  - Low latency
+  - Works in restricted network environments
+
+#### SSE (Server-Sent Events) Mode
+**Best for:** Web applications, remote clients, and HTTP-based integrations
+- **Transport:** HTTP with Server-Sent Events
+- **Protocol:** JSON-RPC 2.0 over HTTP
+- **Use cases:**
+  - Web-based AI assistants
+  - Remote MCP clients
+  - Browser-based applications
+  - Cross-platform web integrations
+- **Advantages:**
+  - HTTP-based (works through firewalls/proxies)
+  - Web interface for testing and documentation
+  - CORS support for web applications
+  - Multiple concurrent connections
+- **Web Interface:** When running in SSE mode, visit `http://localhost:{port}` to:
+  - View interactive API documentation
+  - Test MCP tools directly in the browser
+  - Monitor server status and connections
+  - Access connection details for client integration
 
 ### Available MCP Tools
 
